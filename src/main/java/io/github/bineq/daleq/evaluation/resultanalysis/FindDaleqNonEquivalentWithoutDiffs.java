@@ -5,11 +5,8 @@ import io.github.bineq.daleq.evaluation.ComparisonResult;
 import io.github.bineq.daleq.evaluation.RunComparativeEvaluation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.NumberFormat;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
