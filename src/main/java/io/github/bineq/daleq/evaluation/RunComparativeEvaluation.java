@@ -13,7 +13,6 @@ import io.github.bineq.daleq.idb.IDBPrinter;
 import io.github.bineq.daleq.idb.IDBReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -41,7 +40,7 @@ public class RunComparativeEvaluation {
 
     static final Path JNORM = Path.of("tools/jnorm-cli-1.0.0.jar");
 
-    record ComparativeEvaluationResultRecord(String gav, String provider1, String provider2,String clazz, ComparisonResult result4javap, ComparisonResult result4jnorm, ComparisonResult result4daleq) {
+    public record ComparativeEvaluationResultRecord(String gav, String provider1, String provider2, String clazz, ComparisonResult result4javap, ComparisonResult result4jnorm, ComparisonResult result4daleq) {
         String toCSVLine() {
             return  List.of(gav,provider1,provider2,clazz,result4javap.toString(),result4jnorm.toString(),result4daleq.toString())
             .stream().collect(Collectors.joining("\t"));
@@ -51,10 +50,16 @@ public class RunComparativeEvaluation {
                 List.of("gav","provider1","provider2","class","javap","jnorm","daleq")
                 .stream().collect(Collectors.joining("\t"));
         }
+
+        public static ComparativeEvaluationResultRecord parse(String line) {
+            String[] parts = line.split("\t");
+            assert parts.length == 7;
+            return new ComparativeEvaluationResultRecord(parts[0],parts[1],parts[2],parts[3],ComparisonResult.valueOf(parts[4]),ComparisonResult.valueOf(parts[5]),ComparisonResult.valueOf(parts[6]));
+        }
+
     }
 
     public static void main (String[] args) throws Exception {
-
         try {
             Preconditions.checkArgument(args.length > 1, "at least the output folder and two datasets (index files *.tsv) are required");
             Preconditions.checkArgument(Files.exists(JNORM));
@@ -216,7 +221,7 @@ public class RunComparativeEvaluation {
                         .collect(Collectors.toList());
                     lines.add(0,ComparativeEvaluationResultRecord.getCSVHeaderLine());
 
-                    String resultFileName = provider1 + "-" + provider2 + ".csv";
+                    String resultFileName = "summary.csv";
                     Path resultFile = VALIDATION_DB.resolve(resultFileName);
                     Files.write(resultFile, lines);
 

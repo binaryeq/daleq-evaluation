@@ -3,10 +3,10 @@ package io.github.bineq.daleq.evaluation.resultanalysis;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.NumberFormat;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 public class AnalyseDaleqDiffs {
 
     private final static Logger LOG = LoggerFactory.getLogger(AnalyseDaleqDiffs.class);
-    private final static String DIFF_FILE_NAME = "daleq-diff.txt";
+    final static String DIFF_FILE_NAME = "daleq-diff.txt";
 
     public static void main (String[] args) throws Exception {
         Preconditions.checkArgument(args.length>0);
@@ -96,18 +96,24 @@ public class AnalyseDaleqDiffs {
                 });
         }
 
-        LOG.info("diff files analysed: {}", DIFF_COUNTER.get());
-        LOG.info("checkcast removed/added: {}", REMOVED_CHECKCAST.get());
-        LOG.info("changed constant: {}", CHANGED_CONSTANT.get());
-        LOG.info("stringbuilder initialisation: {}", STRINGBUILDER_INITIALISATION.get());
-        LOG.info("definition of synthetic methods: {}", DEFINITION_OF_SYNTHETIC_METHODS.get());
-        LOG.info("definition of synthetic fields: {}", DEFINITION_OF_SYNTHETIC_FIELDS.get());
-        LOG.info("definition of annotations: {}", DEFINITION_OF_ANNOTATIONS.get());
-        LOG.info("missing method signatures: {}", MISSING_METHOD_SIGNATURE.get());
+        LOG.info("diff files analysed: {}", stringify(DIFF_COUNTER,DIFF_COUNTER));
+        LOG.info("checkcast removed/added: {}", stringify(REMOVED_CHECKCAST,DIFF_COUNTER));
+        LOG.info("changed constant: {}", stringify(CHANGED_CONSTANT,DIFF_COUNTER));
+        LOG.info("stringbuilder initialisation: {}", stringify(STRINGBUILDER_INITIALISATION,DIFF_COUNTER));
+        LOG.info("definition of synthetic methods: {}", stringify(DEFINITION_OF_SYNTHETIC_METHODS,DIFF_COUNTER));
+        LOG.info("definition of synthetic fields: {}", stringify(DEFINITION_OF_SYNTHETIC_FIELDS,DIFF_COUNTER));
+        LOG.info("definition of annotations: {}", stringify(DEFINITION_OF_ANNOTATIONS,DIFF_COUNTER));
+        LOG.info("missing method signatures: {}", stringify(MISSING_METHOD_SIGNATURE,DIFF_COUNTER));
 
         LOG.info("more than one cause: {}", VARIOUS_CAUSES.get());
         LOG.info("no known causes: {}", NO_KNOWN_CAUSE.get());
 
+
+    }
+
+    private static String stringify(AtomicInteger counter, AtomicInteger total) {
+        double rel = ((double)counter.get()) / ((double) total.get());
+        return "" + counter.get() + " ( " + NumberFormat.getPercentInstance().format(rel) +")";
     }
 
     private static boolean isRemovedOrAddedCheckcast(List<String> lines) {
