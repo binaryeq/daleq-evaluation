@@ -142,7 +142,7 @@ public class DaleqDiffsPatternAnalysis {
         LOG.info("missing method signatures: {}", stringify(MISSING_METHOD_SIGNATURE,DIFF_COUNTER));
         LOG.info("access changed: {}", stringify(ACCESS_CHANGED,DIFF_COUNTER));
 
-        LOG.info("more than one cause: {}", VARIOUS_CAUSES.get());
+        LOG.info("more than one cause: {}", stringify(VARIOUS_CAUSES,DIFF_COUNTER));
 
     }
 
