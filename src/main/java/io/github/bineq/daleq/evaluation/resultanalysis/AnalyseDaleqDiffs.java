@@ -29,6 +29,8 @@ public class AnalyseDaleqDiffs {
             })
             .collect(Collectors.toUnmodifiableList());
 
+        // p -> p.result4jnorm() == ComparisonResult.EQUIVALENT is actually redundant here but can be used to check that
+        // the daleq-diff.txt file is always generated
         analyseDiff(roots,r -> r.result4daleq() == ComparisonResult.NON_EQUIVALENT,false);
     }
 
