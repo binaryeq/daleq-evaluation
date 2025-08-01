@@ -1,7 +1,7 @@
 package io.github.bineq.daleq.evaluation.resultanalysis;
 
 import com.google.common.base.Preconditions;
-import io.github.bineq.daleq.evaluation.ComparisonResult;
+import com.google.common.collect.Sets;
 import io.github.bineq.daleq.evaluation.RunComparativeEvaluation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,10 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
 
 /**
  * Algorithm / patterns to analyse generated daleq diff files.
@@ -23,6 +25,22 @@ public class DaleqDiffsPatternAnalysis {
 
     private final static Logger LOG = LoggerFactory.getLogger(DaleqDiffsPatternAnalysis.class);
     final static String DIFF_FILE_NAME = "daleq-diff.txt";
+
+    private static final Function<String,String> GetLastToken = s -> {
+        String[] tokens = s.split("\t");
+        return tokens[tokens.length-1];
+    };
+
+    private static final BiFunction<String,Integer,String> GetTokenAt = (s,i) -> {
+        String[] tokens = s.split("\t");
+        return tokens[i];
+    };
+
+    private static final Function<String,String> RemoveDiffChar = s -> {
+        char c = s.charAt(0) ;
+        assert c=='-' || c=='+';
+        return s.substring(1);
+    };
 
     static void analyseDiff (List<Path> roots, Predicate<RunComparativeEvaluation.ComparativeEvaluationResultRecord> filter, boolean printDetails) throws Exception {
 
@@ -79,7 +97,7 @@ public class DaleqDiffsPatternAnalysis {
                             causeCounter=causeCounter+1;
                             printDetails(printDetails,record,daleqDiff,"removed checkcast");
                         }
-                        if (isChangedConstant(lines)) {
+                        if (isChangedConstantLoad(lines)) {
                             CHANGED_CONSTANT.incrementAndGet();
                             causeCounter=causeCounter+1;
                             printDetails(printDetails,record,daleqDiff,"changed constant");
@@ -121,7 +139,6 @@ public class DaleqDiffsPatternAnalysis {
                         if (causeCounter>1) {
                             VARIOUS_CAUSES.incrementAndGet();
                         }
-
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -165,15 +182,20 @@ public class DaleqDiffsPatternAnalysis {
     }
 
     private static boolean isRemovedOrAddedCheckcast(List<String> lines) {
-        return lines.stream().anyMatch(line -> line.startsWith("+IDB_CHECKCAST") || line.startsWith("-IDB_CHECKCAST"));
+        Set<String> addedTypesChecked =lines.stream().filter(line -> line.startsWith("+IDB_CHECKCAST")).map(GetLastToken).collect(Collectors.toSet());
+        Set<String> removedTypesChecked =lines.stream().filter(line -> line.startsWith("-IDB_CHECKCAST")).map(GetLastToken).collect(Collectors.toSet());
+        return !Sets.symmetricDifference(addedTypesChecked, removedTypesChecked).isEmpty();
     }
 
-    private static boolean isChangedConstant(List<String> lines) {
-        return lines.stream().anyMatch(line -> line.startsWith("-IDB_LDC"))
-            && lines.stream().anyMatch(line -> line.startsWith("+IDB_LDC"));
+    // compare the constant values being loaded
+    private static boolean isChangedConstantLoad(List<String> lines) {
+        Set<String> addedConstants =lines.stream().filter(line -> line.startsWith("+IDB_LDC")).map(GetLastToken).collect(Collectors.toSet());
+        Set<String> removedConstants =lines.stream().filter(line -> line.startsWith("-IDB_LDC")).map(GetLastToken).collect(Collectors.toSet());
+        return !Sets.symmetricDifference(addedConstants, removedConstants).isEmpty();
     }
 
     private static boolean isChangedStringBuilderInitialisation(List<String> lines) {
+
         // java/lang/StringBuilder <init>  (I)V
         return (lines.stream().anyMatch(line -> line.startsWith("+") && line.contains("java/lang/StringBuilder") && line.contains("<init>") && line.contains("(I)V"))
             && lines.stream().anyMatch(line -> line.startsWith("-") && line.contains("java/lang/StringBuilder") && line.contains("<init>") && line.contains("()V")))
@@ -184,40 +206,52 @@ public class DaleqDiffsPatternAnalysis {
             ;
     }
 
-    private static boolean isNamingOfLambdas(List<String> lines) {
-        return (lines.stream().anyMatch(line -> line.startsWith("+IDB_METHOD") && line.contains("lambda$")))
-            || (lines.stream().anyMatch(line -> line.startsWith("-IDB_METHOD") && line.contains("lambda$")))
-            ;
-    }
 
     private static boolean isDefinitionOfAnnotations(List<String> lines) {
-        return (lines.stream().anyMatch(line -> line.startsWith("-IDB_ANNOTATION") && line.contains("$")))
-            && (lines.stream().anyMatch(line -> line.startsWith("+IDB_ANNOTATION") && line.contains("$")))
-            ;
+        Set<String> addedAnnotations = lines.stream().filter(line -> line.startsWith("+IDB_ANNOTATION")).map(RemoveDiffChar).collect(Collectors.toSet());
+        Set<String> removedAnnotations =lines.stream().filter(line -> line.startsWith("-IDB_ANNOTATION")).map(RemoveDiffChar).collect(Collectors.toSet());
+        return !Sets.symmetricDifference(addedAnnotations, removedAnnotations).isEmpty();
     }
 
     private static boolean isDefintionOfSyntheticMethods(List<String> lines) {
-        return (lines.stream().anyMatch(line -> line.startsWith("+IDB_METHOD") && line.contains("$")))
-            && (lines.stream().anyMatch(line -> line.startsWith("-IDB_METHOD") && line.contains("$")))
-            ;
+        Set<String> synthMethodsAdded =lines.stream()
+            .filter(line -> line.startsWith("+IDB_METHOD"))
+            .filter(line -> line.contains("$"))
+            .map(line -> GetTokenAt.apply(line,2))
+            .collect(Collectors.toSet());
+        Set<String> synthMethodsRemoved =lines.stream()
+            .filter(line -> line.startsWith("-IDB_METHOD"))
+            .filter(line -> line.contains("$"))
+            .map(line -> GetTokenAt.apply(line,2))
+            .collect(Collectors.toSet());
+        return !Sets.symmetricDifference(synthMethodsAdded, synthMethodsRemoved).isEmpty();
     }
 
     private static boolean isAccessChanged(List<String> lines) {
-        return (lines.stream().anyMatch(line -> line.startsWith("+IDB_ACCESS")))
-            && (lines.stream().anyMatch(line -> line.startsWith("-IDB_ACCESS")))
-            ;
+        Set<String> addedAccess = lines.stream().filter(line -> line.startsWith("+IDB_ACCESS")).map(GetLastToken).collect(Collectors.toSet());
+        Set<String> removedAccess =lines.stream().filter(line -> line.startsWith("-IDB_ACCESS")).map(GetLastToken).collect(Collectors.toSet());
+        return !Sets.symmetricDifference(addedAccess, removedAccess).isEmpty();
     }
 
     private static boolean isDefinitionOfSyntheticFields(List<String> lines) {
-        // lambda$null
-        return (lines.stream().anyMatch(line -> line.startsWith("+IDB_FIELD") && line.contains("$")))
-            && (lines.stream().anyMatch(line -> line.startsWith("-IDB_FIELD") && line.contains("$")))
-            ;
+        Set<String> synthFieldsAdded =lines.stream()
+            .filter(line -> line.startsWith("+IDB_FIELD"))
+            .filter(line -> line.contains("$"))
+            .map(line -> GetTokenAt.apply(line,2))
+            .collect(Collectors.toSet());
+        Set<String> synthFieldsRemoved =lines.stream()
+            .filter(line -> line.startsWith("-IDB_FIELD"))
+            .filter(line -> line.contains("$"))
+            .map(line -> GetTokenAt.apply(line,2))
+            .collect(Collectors.toSet());
+        return !Sets.symmetricDifference(synthFieldsAdded, synthFieldsRemoved).isEmpty();
+
     }
 
     private static boolean isMissingSignature(List<String> lines) {
-        return (lines.stream().anyMatch(line -> line.startsWith("+IDB_METHOD_SIGNATURE") && line.endsWith("null")))
-            || (lines.stream().anyMatch(line -> line.startsWith("-IDB_METHOD_SIGNATURE") && line.endsWith("null")))
-            ;
+        Set<String> addedNullSignatures = lines.stream().filter(line -> line.startsWith("+IDB_METHOD_SIGNATURE")).map(GetLastToken).filter(s -> s.equals("null")).collect(Collectors.toSet());
+        Set<String> removedNullSignatures =lines.stream().filter(line -> line.startsWith("-IDB_METHOD_SIGNATURE")).map(GetLastToken).filter(s -> s.equals("null")).collect(Collectors.toSet());
+        return !Sets.symmetricDifference(addedNullSignatures, removedNullSignatures).isEmpty();
     }
+
 }
