@@ -93,7 +93,11 @@ The main classes are as follows:
 2. `io.github.bineq.daleq.evaluation.resultanalysis.AnalyseDaleqDiffs4JavapEquivalent` - analyse all pairs of classes that are not daleq-equivalent but javap-equivalent. 
 3. `io.github.bineq.daleq.evaluation.resultanalysis.AnalyseDaleqDiffs4JNormEquivalent` - analyse all pairs of classes that are not daleq-equivalent but jnorm-equivalent.
 
+## Performance Analysis
 
+Using the same setup as before, use the following main class: 
+`io.github.bineq.daleq.evaluation.resultanalysis.ComputeRuntimeStats`.
+Results will appear on the console.
 
 
 
