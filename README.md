@@ -20,16 +20,16 @@ Download the *JNorm* from [https://github.com/stschott/jnorm-tool/releases/downl
 
 Follow these [instructions](https://souffle-lang.github.io/install) to download and install souffle.
 
-## TODO
+## Download and Install Java11
 
-Set up Java 17 to succesfully run *JNorm*.
+To succesfully run *JNorm* we used Java11. The path to the Java 11 _java_ executable is to some experiments as a JVM argument.
 
 # Running Evaluation Experiments
 
 ## Equivalence Analysis
 
 1. compute the classpath using `dependency:build-classpath`
-2. run `java -cp <classpath> -ea -DSOUFFLE=<souffle-home> io.github.bineq.daleq.evaluation.RunComparativeEvaluation <output-folder> <input1>.tsv <input2>.tsv`
+2. run `java -cp <classpath> -ea -DSOUFFLE=<souffle-home> -DJAVA11=<java11> io.github.bineq.daleq.evaluation.RunComparativeEvaluation <output-folder> <input1>.tsv <input2>.tsv`
 
 The input files are the *.tsv files from the alternative build dataset,
 such as `gav_gaoss.tsv` (for jars from Google GAOSS), `gav_mvnc.tsv` (for jars from Maven Central) and

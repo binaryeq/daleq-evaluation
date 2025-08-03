@@ -13,7 +13,6 @@ import io.github.bineq.daleq.idb.IDBPrinter;
 import io.github.bineq.daleq.idb.IDBReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -34,6 +33,12 @@ public class RunComparativeEvaluation {
 
     final static Logger LOG = LoggerFactory.getLogger(RunComparativeEvaluation.class);
     static final RunEvaluation.DB_RETENTION_POLICY RETENTION_POLICY = RunEvaluation.DB_RETENTION_POLICY.ZIP;
+
+    static final String JAVA11 = "JAVA11";
+    static String JAVA11_EXE = null;
+    static {
+        JAVA11_EXE = System.getProperty(JAVA11);
+    }
 
     private static Path VALIDATION_DB = null;
     private static final boolean REUSE_IDB = true;
@@ -56,11 +61,11 @@ public class RunComparativeEvaluation {
             assert parts.length == 7;
             return new ComparativeEvaluationResultRecord(parts[0],parts[1],parts[2],parts[3],ComparisonResult.valueOf(parts[4]),ComparisonResult.valueOf(parts[5]),ComparisonResult.valueOf(parts[6]));
         }
-
     }
 
     public static void main (String[] args) throws Exception {
         try {
+            Preconditions.checkArgument(JAVA11_EXE!=null,"JVM argument must be used set Java 11 to be used with jnorm, example: -D" + JAVA11 +"=jdk-11.0.11.jdk/Contents/Home/bin/java");
             Preconditions.checkArgument(args.length > 1, "at least the output folder and two datasets (index files *.tsv) are required");
             Preconditions.checkArgument(Files.exists(JNORM));
 
@@ -477,9 +482,8 @@ public class RunComparativeEvaluation {
     private static int jnorm(Path jar, Path jnormJar,Path errorFile) throws IOException, InterruptedException {
         LOG.info("running jnorm on {} , output saved to {}", jar, jnormJar);
 
-        ByteArrayOutputStream bout = new ByteArrayOutputStream();
         Process process = new ProcessBuilder()
-            .command("/Library/Java/JavaVirtualMachines/jdk-11.0.11.jdk/Contents/Home/bin/java","-jar",JNORM.toString(),"-n","-i",jar.toString(),"-d",jnormJar.toString())
+            .command(JAVA11_EXE,"-jar",JNORM.toString(),"-n","-i",jar.toString(),"-d",jnormJar.toString())
             .inheritIO()
             .redirectError(errorFile.toFile())
             .start();
