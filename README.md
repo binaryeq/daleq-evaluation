@@ -99,7 +99,11 @@ Using the same setup as before, use the following main class:
 `io.github.bineq.daleq.evaluation.resultanalysis.ComputeRuntimeStats`.
 Results will appear on the console.
 
+## Sponsors
 
+<img width="200" height="200" alt="image" src="https://github.com/user-attachments/assets/5a51f47a-d715-4a74-9346-09281e380202" />
+
+[Oracle Labs Australia](https://labs.oracle.com/)
 
 
 
